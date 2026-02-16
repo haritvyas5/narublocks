@@ -129,5 +129,6 @@ Projects can be tagged during upload. These tags are indexed and allow for quick
 ## 📄 License
 This project is licensed under the **MIT License**.
 
+Special Thanks to the Stelace Team for the initial setup and inspiration.
 ---
-*Made with ❤️ for the Maker Community by the Stelace Team.*
+*Made with ❤️ for the Maker Community by the Naruino Team.*
