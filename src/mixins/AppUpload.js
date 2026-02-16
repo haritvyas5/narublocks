@@ -97,7 +97,7 @@ export default {
       if (this.uploadFolder) options.folder = this.uploadFolder
 
       return getS3SignedUrl(file, options)
-        .then(({ fields: formFields, url, fieldName, S3FileUrl }) => {
+        .then(({ fields: formFields, url, fieldName, S3FileUrl, headers }) => {
           let handler = this.uploadingFileUrlHandler
           handler = typeof handler === 'function' ? handler : _ => _
 

@@ -87,10 +87,12 @@ export default {
       mdiForum,
     }
 
-    const assets = await this.$store.dispatch('fetchLastAssets', {
-      nbResults: 6 
-    })
-    this.trendingAssets = assets || []
+    this.refreshTrendingAssets()
+  },
+  watch: {
+    selectedCategory () {
+      this.refreshTrendingAssets()
+    }
   },
   methods: {
     search () {
@@ -114,6 +116,18 @@ export default {
     },
     getAuthorName (asset) {
       return asset.owner ? (asset.owner.displayName || `${asset.owner.firstName} ${asset.owner.lastName}`) : 'Unknown'
+    },
+    async refreshTrendingAssets () {
+      const filters = { nbResults: 6 }
+      
+      if (this.selectedCategory !== 'All Projects') {
+        filters.customAttributesFilters = {
+          category: this.selectedCategory
+        }
+      }
+
+      const assets = await this.$store.dispatch('fetchLastAssets', filters)
+      this.trendingAssets = assets || []
     }
   }
 }

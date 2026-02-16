@@ -82,31 +82,34 @@ const storageRoute = {
         })
 
         // 3. Serve Assets
+        // 3. Serve Assets
         const serveStatic = restify.plugins.serveStatic({
             directory: publicDir,
-            default: 'index.html'
+            appendNext: true
         })
 
         // Map /assets/* -> /public/*
-        server.get('/assets/*', (req, res, next) => {
-            req.url = req.url.replace('/assets/', '/')
+        server.get({
+            path: '/assets/*',
+            manualAuth: true
+        }, (req, res, next) => {
+            console.log(`[local-storage] serving asset: ${req.url} from ${publicDir}`)
+            req.url = decodeURIComponent(req.url.replace('/assets/', '/'))
             return serveStatic(req, res, next)
         })
 
         // Map /upload/* -> /public/*
-        server.get('/upload/*', (req, res, next) => {
+        server.get({
+            path: '/upload/*',
+            manualAuth: true
+        }, (req, res, next) => {
             // Only serve if it's not the POST /upload route
             if (req.method === 'GET') {
-                req.url = req.url.replace('/upload/', '/')
+                console.log(`[local-storage] serving upload: ${req.url} from ${publicDir}`)
+                req.url = decodeURIComponent(req.url.replace('/upload/', '/'))
                 return serveStatic(req, res, next)
             }
             return next()
-        })
-
-        // Support direct /public/*
-        server.get('/public/*', (req, res, next) => {
-            req.url = req.url.replace('/public/', '/')
-            return serveStatic(req, res, next)
         })
     },
     start() { },

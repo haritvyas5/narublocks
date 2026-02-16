@@ -32,6 +32,7 @@ import {
   matMemory,
   matSensors,
   matSettingsInputComponent,
+  matDelete,
 } from '@quasar/extras/material-icons'
 
 export default {
@@ -130,7 +131,13 @@ export default {
         { label: 'SCHEMATICS', value: 'schematics' },
         { label: `COMMENTS (${this.commentCount})`, value: 'comments' },
       ]
-    }
+    },
+    tags () {
+      return get(this.activeAsset, 'metadata.tags', [])
+    },
+    narublockFileUrl () {
+      return get(this.activeAsset, 'metadata.narublockFileUrl', '')
+    },
   },
   async preFetch ({ store, currentRoute, redirect }) {
     const { id: assetId } = currentRoute.params
@@ -156,6 +163,7 @@ export default {
       matMemory,
       matSensors,
       matSettingsInputComponent,
+      matDelete,
     }
     this.fetchRelatedAssets()
     this.fetchAssetRatingsByTransaction()
@@ -196,6 +204,38 @@ export default {
     },
     goBack () {
       this.$router.go(-1)
+    },
+    async deleteProject () {
+      if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) return
+
+      try {
+        await this.$store.dispatch('removeAsset', { assetId: this.activeAsset.id })
+        this.notifySuccess('Project deleted successfully', { i18n: false })
+        this.$router.push({ name: 'home' })
+      } catch (err) {
+        this.notifyWarning('error.unknown_happened_header')
+      }
+    },
+    async forkProject () {
+      if (!this.currentUser.id) {
+        this.openAuthDialog({ action: 'fork' })
+        return
+      }
+
+      if (this.isCurrentUserTheOwner) return
+
+      if (!confirm('Fork this project to your account?')) return
+
+      try {
+        const newAsset = await this.$store.dispatch('forkAsset', { asset: this.activeAsset })
+        this.notifySuccess('Project forked successfully!')
+        this.$router.push({ name: 'asset', params: { id: newAsset.id } })
+      } catch (err) {
+        this.notifyWarning('error.unknown_happened_header')
+      }
+    },
+    searchByTag (tag) {
+      this.$router.push({ name: 'search', query: { q: tag } })
     }
   }
 }
@@ -213,6 +253,17 @@ export default {
         </div>
       </div>
       <div class="row items-center q-gutter-x-md">
+        <QBtn 
+          v-if="isCurrentUserTheOwner"
+          flat 
+          round 
+          dense 
+          :icon="icons.matDelete" 
+          color="negative" 
+          @click="deleteProject" 
+        >
+          <QTooltip>Delete Project</QTooltip>
+        </QBtn>
         <QBtn flat round dense :icon="icons.matShare" color="grey" />
         <QBtn flat round dense :icon="icons.matFavoriteBorder" color="grey" />
       </div>
@@ -254,6 +305,22 @@ export default {
             </div>
           </div>
 
+          <div v-if="tags.length" class="row items-center q-gutter-xs q-mt-md">
+            <QChip
+              v-for="tag in tags"
+              :key="tag"
+              clickable
+              outline
+              color="primary"
+              text-color="primary"
+              size="sm"
+              class="font-mono text-weight-bold"
+              @click="searchByTag(tag)"
+            >
+              {{ tag }}
+            </QChip>
+          </div>
+
           <!-- Working File Action Card -->
           <div class="working-file-card q-mt-xl q-pa-lg round-md border-primary-glow" :class="isDarkMode ? 'bg-surface' : 'bg-grey-1'">
             <div class="row justify-between items-start q-mb-lg">
@@ -266,10 +333,14 @@ export default {
             
             <QBtn 
               unelevated 
+              :type="narublockFileUrl ? 'a' : 'button'"
+              :href="narublockFileUrl"
+              :target="narublockFileUrl ? '_blank' : ''"
               color="white" 
               text-color="black" 
               no-caps 
               class="full-width text-weight-bold q-py-md q-mb-md button-rounded"
+              :disable="!narublockFileUrl"
             >
               <template #default>
                 <div class="row items-center q-gutter-x-sm">
@@ -289,7 +360,14 @@ export default {
                 </QBtn>
               </div>
               <div class="col">
-                <QBtn outline :color="isDarkMode ? 'white' : 'black'" no-caps class="full-width text-weight-bold button-rounded q-py-sm">
+                <QBtn 
+                  outline 
+                  :color="isDarkMode ? 'white' : 'black'" 
+                  no-caps 
+                  class="full-width text-weight-bold button-rounded q-py-sm"
+                  @click="forkProject"
+                  :disable="isCurrentUserTheOwner"
+                >
                   <div class="row items-center q-gutter-x-sm">
                     <QIcon :name="icons.matAccountTree" size="18px" />
                     <span>Fork Project</span>

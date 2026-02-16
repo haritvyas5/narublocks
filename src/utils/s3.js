@@ -43,8 +43,8 @@ export function getS3SignedUrl(file, { folder = 'files' } = {}) {
       // so it resolves via the Quasar proxy which injects the API key.
       const cdnBase = process.env.VUE_APP_CDN_WITH_IMAGE_HANDLER_URL
       const S3FileUrl = (cdnBase && (cdnBase.includes('localhost') || cdnBase.startsWith('/')))
-        ? `${cdnBase}${path}`
-        : `${baseUrl}/${path}`
+        ? encodeURI(`${cdnBase}${path}`)
+        : encodeURI(`${baseUrl}/${path}`)
 
       return {
         S3FileUrl,

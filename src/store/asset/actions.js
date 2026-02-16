@@ -7,7 +7,7 @@ import { populateAsset } from 'src/utils/asset'
 import { roundUpPower10 } from 'src/utils/number'
 import p from 'src/utils/promise'
 
-export async function fetchLastAssets ({ dispatch, rootState, rootGetters }, { nbResults = 3 } = {}) {
+export async function fetchLastAssets({ dispatch, rootState, rootGetters }, { nbResults = 3, customAttributesFilters = {} } = {}) {
   await dispatch('fetchConfig')
 
   const searchOptions = rootGetters.searchOptions
@@ -31,6 +31,7 @@ export async function fetchLastAssets ({ dispatch, rootState, rootGetters }, { n
       page: 1,
       nbResultsPerPage: nbResults,
       filters,
+      customAttributesFilters,
       orderBy: 'createdDate',
       order: 'desc'
     }),
@@ -69,7 +70,7 @@ export async function fetchLastAssets ({ dispatch, rootState, rootGetters }, { n
   })
 }
 
-export async function initEditAssetPage ({ state, commit, dispatch }, { assetId } = {}) {
+export async function initEditAssetPage({ state, commit, dispatch }, { assetId } = {}) {
   const [
     asset,
     availabilities,
@@ -93,7 +94,7 @@ export async function initEditAssetPage ({ state, commit, dispatch }, { assetId 
 }
 
 // Show currentUser assets if userId is not specified
-export async function fetchUserAssets ({ commit, dispatch, rootState, rootGetters }, { userId, fetchAssetAvailabilities = true } = {}) {
+export async function fetchUserAssets({ commit, dispatch, rootState, rootGetters }, { userId, fetchAssetAvailabilities = true } = {}) {
   const {
     categoriesById,
     assetTypesById,
@@ -147,7 +148,7 @@ export async function fetchUserAssets ({ commit, dispatch, rootState, rootGetter
   })
 }
 
-export async function getHighestPrice ({ rootState, commit }, { setPriceRange = true } = {}) {
+export async function getHighestPrice({ rootState, commit }, { setPriceRange = true } = {}) {
   const assetTypeIds = rootState.search.assetTypesIds
   const params = {
     validated: true,
@@ -171,7 +172,7 @@ export async function getHighestPrice ({ rootState, commit }, { setPriceRange = 
   return max
 }
 
-export async function createAsset ({ commit }, { attrs }) {
+export async function createAsset({ commit }, { attrs }) {
   const asset = await stelace.assets.create(attrs)
 
   commit({
@@ -182,7 +183,7 @@ export async function createAsset ({ commit }, { attrs }) {
   return asset
 }
 
-export async function updateAsset ({ commit }, { assetId, attrs }) {
+export async function updateAsset({ commit }, { assetId, attrs }) {
   const asset = await stelace.assets.update(assetId, attrs)
 
   commit({
@@ -193,16 +194,70 @@ export async function updateAsset ({ commit }, { assetId, attrs }) {
   return asset
 }
 
-export async function removeAsset ({ commit }, { assetId }) {
+export async function removeAsset({ commit }, { assetId }) {
   await stelace.assets.remove(assetId)
 
   commit({
     type: types.SET_ASSET,
     asset: null
   })
+  commit({
+    type: types.SET_ASSET,
+    asset: null
+  })
 }
 
-export async function fetchAvailabilityGraph ({ state, commit }, { assetId }) {
+export async function forkAsset({ commit, rootGetters }, { asset }) {
+  if (!asset) throw new Error('Asset is required to fork')
+
+  // Clone asset to avoid mutating original
+  const newAssetAttrs = JSON.parse(JSON.stringify(asset))
+
+  // Remove system fields and expanded objects
+  delete newAssetAttrs.id
+  delete newAssetAttrs.ownerId
+  delete newAssetAttrs.owner
+  delete newAssetAttrs.createdDate
+  delete newAssetAttrs.updatedDate
+  delete newAssetAttrs.assetType
+  delete newAssetAttrs.category
+  delete newAssetAttrs.locations
+  delete newAssetAttrs.livemode
+  delete newAssetAttrs.platformData // platformData is restricted
+  delete newAssetAttrs.images // populateAsset adds this, but API expects metadata.images
+
+  // Remove client-side populated fields (from src/utils/asset.js)
+  delete newAssetAttrs.categoryName
+  delete newAssetAttrs.locationName
+  delete newAssetAttrs.timeUnit
+  delete newAssetAttrs.ownerLink
+  delete newAssetAttrs.distance
+  delete newAssetAttrs.averageRating
+
+  // Update name and metadata
+  newAssetAttrs.name = `Fork of ${newAssetAttrs.name}`
+  newAssetAttrs.metadata = newAssetAttrs.metadata || {}
+  newAssetAttrs.metadata.forkedFrom = asset.id
+  newAssetAttrs.quantity = 1 // Ensure quantity is reset to 1 for the new owner
+
+  try {
+    // Create new asset
+    const newAsset = await stelace.assets.create(newAssetAttrs)
+
+    // Commit new asset to state
+    commit({
+      type: types.SET_ASSET,
+      asset: newAsset
+    })
+
+    return newAsset
+  } catch (err) {
+    console.error('Fork Asset Error:', err)
+    throw err
+  }
+}
+
+export async function fetchAvailabilityGraph({ state, commit }, { assetId }) {
   const availabilityGraph = await stelace.availabilities.getGraph({ assetId })
 
   commit({
@@ -212,7 +267,7 @@ export async function fetchAvailabilityGraph ({ state, commit }, { assetId }) {
   })
 }
 
-export async function fetchAvailabilities ({ state, commit }, { assetId }) {
+export async function fetchAvailabilities({ state, commit }, { assetId }) {
   const fetchAvailabilitiesRequest = (...args) => stelace.availabilities.list(...args)
 
   const availabilities = await fetchAllResults(fetchAvailabilitiesRequest, { assetId })
@@ -227,7 +282,7 @@ export async function fetchAvailabilities ({ state, commit }, { assetId }) {
   return availabilities
 }
 
-export async function createAvailability ({ state, commit }, { attrs }) {
+export async function createAvailability({ state, commit }, { attrs }) {
   const availability = await stelace.availabilities.create(attrs)
 
   const availabilitiesById = Object.assign({}, state.availabilitiesById)
@@ -241,7 +296,7 @@ export async function createAvailability ({ state, commit }, { attrs }) {
   return availability
 }
 
-export async function updateAvailability ({ state, commit }, { availabilityId, attrs }) {
+export async function updateAvailability({ state, commit }, { availabilityId, attrs }) {
   const availability = await stelace.availabilities.update(availabilityId, attrs)
 
   const availabilitiesById = Object.assign({}, state.availabilitiesById)

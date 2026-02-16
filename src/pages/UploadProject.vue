@@ -5,6 +5,8 @@ import { matClose, matDeleteOutline, matPhotoCamera, matLink, matAdd, matKeyboar
 import AppUploadMixin from 'src/mixins/AppUpload'
 import PageComponentMixin from 'src/mixins/pageComponent'
 
+import axios from 'axios'
+import { getS3SignedUrl } from 'src/utils/s3'
 import logger from 'src/utils/logger'
 
 export default {
@@ -97,6 +99,35 @@ export default {
         this.narublockFileName = file.name
       }
     },
+
+    async uploadNarublockFile () {
+      if (!this.narublockFile) return null
+
+      try {
+        const { fields, url, S3FileUrl, headers } = await getS3SignedUrl(this.narublockFile, { folder: 'files' })
+        
+        const formData = new FormData()
+        fields.forEach(({ name, value }) => {
+          formData.append(name, value)
+        })
+        formData.append('file', this.narublockFile)
+
+        // Convert headers array to object for axios
+        const headersObj = {}
+        if (headers && headers.length) {
+          headers.forEach(({ name, value }) => {
+            headersObj[name] = value
+          })
+        }
+
+        await axios.post(url, formData, { headers: headersObj })
+        
+        return S3FileUrl
+      } catch (err) {
+        logger(err)
+        throw new Error('Failed to upload Narublock file')
+      }
+    },
     // Tags
     addTag () {
       if (!this.showTagInput) {
@@ -143,6 +174,11 @@ export default {
             tags: this.tags,
             narublockFileName: this.narublockFileName,
           }
+        }
+
+        if (this.narublockFile) {
+          const narublockFileUrl = await this.uploadNarublockFile()
+          attrs.metadata.narublockFileUrl = narublockFileUrl
         }
 
         if (this.content.currency) {

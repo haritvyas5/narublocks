@@ -17,6 +17,40 @@ Feel free to [fork](
 
 This starter kit offers **a [high-performance](#fast-by-default-checkered_flag) AirBnB-like marketplace front-end (Vue.js) with pre-configured serverless deployment** based on [open-source](https://github.com/stelace/stelace) [Stelace API](https://stelace.com) server.
 
+## Recent Project Updates
+
+I have implemented project deletion, tag functionality, file upload/download, and project forking.
+
+### Asset Page
+**Project Deletion**:
+- **Delete Button**: Added a "Delete Project" button to the header actions.
+    - **Visibility**: Only visible to the project owner.
+- **Deletion Logic**:
+    - Triggers a confirmation dialog.
+    - Dispatches `removeAsset` action.
+    - Redirects to home page on success.
+
+**Project Tags**:
+- **Tag Display**: Added tags display below the project metadata section.
+- **Tag Search**:
+    - Clicking a tag navigates to the search page with the tag as a query (`/s?q={tag}`).
+
+### Homepage Tag Sorting
+- **Functionality**: Clicking a category tag on the homepage now filters the "Trending Now" section.
+- **Store Update**: `fetchLastAssets` now supports custom attribute filters.
+
+### File Upload and Download
+- **Functionality**:
+    - "Narublock File" input in `UploadProject.vue` now uploads the selected file to S3.
+    - The file URL is stored in the project's metadata.
+    - "Download .ZIP" button in `Asset.vue` links to this URL.
+
+### Project Forking
+- **Functionality**:
+    - "Fork Project" button in `Asset.vue` allows authenticated users to copy another user's project.
+    - Creates a new project with "Fork of [Original Name]" and links to the original.
+- **Bug Fixes**: Resolved various API errors (400, 403) during forking by stripping restricted and client-side decorated fields.
+
 ## Contents
 
 - [Features :gift:](#features-gift)
