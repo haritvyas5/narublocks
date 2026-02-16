@@ -30,7 +30,16 @@ const cdn = new Cdn({
 })
 const isDevDebuggingStyles = process.env.DEV && process.env.VUE_APP_DEBUG_STYLES === 'true'
 
-export function entries (state) {
+// Check if a URI is a local development URL (bypass CDN processing)
+function isLocalUrl(uri) {
+  return uri && (
+    uri.startsWith('http://localhost') ||
+    uri.startsWith('http://127.0.0.1') ||
+    uri.startsWith('/stelace-images/')
+  )
+}
+
+export function entries(state) {
   const { apiEntries, localEntries, editingEntries, locale } = state
 
   const merged = mergeEntries({ apiEntries, localEntries, editingEntries })
@@ -42,7 +51,7 @@ export function entries (state) {
   return merged
 }
 
-export function getContents (state, getters) {
+export function getContents(state, getters) {
   const entries = getters.entries
 
   /**
@@ -71,7 +80,7 @@ export function getContents (state, getters) {
   return getterFn
 }
 
-export function getRawContent (state) {
+export function getRawContent(state) {
   const { apiEntries, localEntries } = state
   /**
    * Getter function (not cached).
@@ -94,16 +103,16 @@ export function getRawContent (state) {
  * @param {String} key - must include both entry and field like `${entry}.${field}`
  * @returns {String|Boolean} transform type like `'markdown'` or `false` value
  */
-export function getContentTransformType (state, getters) {
+export function getContentTransformType(state, getters) {
   // key must include both entry and field like `${entry}.${field}`
   return key => getters.entries[TRANSFORMED_KEYS][key] || false
 }
 
-export function termsPath (state, getters) {
+export function termsPath(state, getters) {
   return getters.entries['instant_pages.terms.INSTANT_PAGE_PATH'] || 'terms'
 }
 
-export function getHomeHeroUrlTransformed (state, getters, rootState) {
+export function getHomeHeroUrlTransformed(state, getters, rootState) {
   const url = rootState.style.homeHeroUrl || ''
 
   return ({ noWebP, width } = {}) => {
@@ -125,37 +134,37 @@ export function getHomeHeroUrlTransformed (state, getters, rootState) {
   }
 }
 
-export function placeholderImage (state, getters) {
+export function placeholderImage(state, getters) {
   return `${state.placeholderImageBaseUrl}/${getters.baseImageWidth}/${getters.baseImageHeight}/nature`
 }
 
-export function avatarImageWidth (state, getters, rootState) {
+export function avatarImageWidth(state, getters, rootState) {
   return rootState.style.avatarImageWidth || 96
 }
 
-export function baseImageWidth (state, getters, rootState) {
+export function baseImageWidth(state, getters, rootState) {
   return rootState.style.baseImageWidth || 600
 }
 
-export function baseImageHeight (state, getters, rootState, rootGetters) {
+export function baseImageHeight(state, getters, rootState, rootGetters) {
   return getters.baseImageWidth / rootGetters.baseImageRatio
 }
 
-export function smallImageWidth (state, getters, rootState) {
+export function smallImageWidth(state, getters, rootState) {
   return Math.round(rootState.style.baseImageWidth / 2)
 }
 
-export function largeImageWidth (state, getters) {
+export function largeImageWidth(state, getters) {
   return 2 * getters.baseImageWidth
 }
 
-export function largeImageHeight (state, getters, rootState, rootGetters) {
+export function largeImageHeight(state, getters, rootState, rootGetters) {
   return getters.largeImageWidth / rootGetters.baseImageRatio
 }
 
 // TODO: use srcset to detect resolution
 // For now load 2x size everywhere in app
-export function getAvatarImageUrl (state, getters) {
+export function getAvatarImageUrl(state, getters) {
   return (user, { resolution = 2 } = {}) => {
     const imgUri = user.avatarUrl || ''
     const avatarSquareSize = Math.round(resolution) * getters.avatarImageWidth
@@ -169,7 +178,7 @@ export function getAvatarImageUrl (state, getters) {
   }
 }
 
-export function getBaseImageUrl (state, getters, rootState, rootGetters) {
+export function getBaseImageUrl(state, getters, rootState, rootGetters) {
   return (resource, { accessorString, index = 0, width } = {}) => {
     const imgUri = getImageUri(resource, { accessorString, index })
     const resize = {
@@ -183,6 +192,9 @@ export function getBaseImageUrl (state, getters, rootState, rootGetters) {
       resize.height = Math.round(width / rootGetters.baseImageRatio)
     }
 
+    // Local dev images: serve directly without CDN processing
+    if (isLocalUrl(imgUri)) return imgUri
+
     return cdn.servedFromCdnBucket(imgUri)
       ? cdn.getUrl(imgUri, {
         webp: state.acceptWebP,
@@ -192,9 +204,12 @@ export function getBaseImageUrl (state, getters, rootState, rootGetters) {
   }
 }
 
-export function getLargeImageUrl (state, getters) {
+export function getLargeImageUrl(state, getters) {
   return (resource, { accessorString, index = 0 } = {}) => {
     const imgUri = getImageUri(resource, { accessorString, index })
+
+    // Local dev images: serve directly without CDN processing
+    if (isLocalUrl(imgUri)) return imgUri
 
     return cdn.servedFromCdnBucket(imgUri)
       ? cdn.getUrl(imgUri, {
@@ -210,7 +225,7 @@ export function getLargeImageUrl (state, getters) {
 }
 
 // Resource param can be asset, profile or any other object with metadata.images for gallery
-export function getResourceGalleryItems (state, getters, rootState, rootGetters) {
+export function getResourceGalleryItems(state, getters, rootState, rootGetters) {
   return (resource = rootGetters.activeAsset) => {
     if (isEmpty(resource)) return []
 
@@ -239,7 +254,7 @@ export function getResourceGalleryItems (state, getters, rootState, rootGetters)
 }
 
 // Resource param can be asset, profile or any other object with metadata.images for gallery
-export function getResourceGalleryOptions (state, getters, rootState, rootGetters) {
+export function getResourceGalleryOptions(state, getters, rootState, rootGetters) {
   const nbColumns = 3
 
   return (resource = rootGetters.activeAsset) => ({
@@ -257,7 +272,7 @@ export function getResourceGalleryOptions (state, getters, rootState, rootGetter
       maxNbThumbnails: 6,
       columnContainerClass: [
         `col-12 ${ // Main picture, even bigger if it’s the only one in gallery
-          get(resource, 'metadata.images.length', 0) >= nbColumns ? 'col-sm-8' : ''
+        get(resource, 'metadata.images.length', 0) >= nbColumns ? 'col-sm-8' : ''
         }`,
         'col-12 col-sm-4', // 2 pictures
         'col-12 row', // Lines of 3 pictures starting from 4th
@@ -276,10 +291,10 @@ export function getResourceGalleryOptions (state, getters, rootState, rootGetter
   })
 }
 
-function getAccessorString (index) {
+function getAccessorString(index) {
   return `metadata.images[${index}].url`
 }
 
-function getImageUri (resource, { accessorString, index = 0 } = {}) {
+function getImageUri(resource, { accessorString, index = 0 } = {}) {
   return accessorString ? get(resource, accessorString, '') : get(resource, getAccessorString(index), '')
 }

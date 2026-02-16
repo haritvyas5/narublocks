@@ -4,7 +4,7 @@ import { get } from 'lodash'
 const publishable = process.env.STELACE_PUBLISHABLE_API_KEY
 
 // Ensures we use an appropriate file 'path' prefix when uploading to S3
-export function cleanPrefix (prefix = '') {
+export function cleanPrefix(prefix = '') {
   return prefix
     .replace(/\/{2,}/g, '/')
     .replace(/^\//, '')
@@ -16,13 +16,13 @@ export function cleanPrefix (prefix = '') {
  * @param  {Object} [options]
  * @param  {Object} [options.folder] - For easier maintenance add S3 "folder" prefix (without leading /)
  */
-export function getS3SignedUrl (file, { folder = 'files' } = {}) {
+export function getS3SignedUrl(file, { folder = 'files' } = {}) {
   return axios.get( // get AWS S3 signed URL from Lambda behind API Getaway
-    `${process.env.VUE_APP_CDN_POLICY_ENDPOINT}?filename=${
-      encodeURIComponent(file.name)
-    }&folder=${
-      cleanPrefix(process.env.VUE_APP_CDN_UPLOAD_PREFIX)
-    }${folder}`,
+    `${process.env.VUE_APP_CDN_POLICY_ENDPOINT}?filename=${encodeURIComponent(file.name)
+    }&folder=${(folder && cleanPrefix(process.env.VUE_APP_CDN_UPLOAD_PREFIX) === cleanPrefix(folder))
+      ? cleanPrefix(folder)
+      : `${cleanPrefix(process.env.VUE_APP_CDN_UPLOAD_PREFIX)}${folder}`
+    }`,
     {
       headers: { 'x-api-key': publishable },
     }
@@ -39,13 +39,21 @@ export function getS3SignedUrl (file, { folder = 'files' } = {}) {
       const path = get(fields.find(obj => obj.name === 'key'), 'value')
       if (!path) throw new Error('Could not get signed upload path from S3')
 
-      const S3FileUrl = `${baseUrl}/${path}`
+      // For local development: use the CDN asset base URL (proxy path) for the stored image URL
+      // so it resolves via the Quasar proxy which injects the API key.
+      const cdnBase = process.env.VUE_APP_CDN_WITH_IMAGE_HANDLER_URL
+      const S3FileUrl = (cdnBase && (cdnBase.includes('localhost') || cdnBase.startsWith('/')))
+        ? `${cdnBase}${path}`
+        : `${baseUrl}/${path}`
 
       return {
         S3FileUrl,
         fields,
         url: baseUrl,
-        fieldName: 'file' // S3 POST: https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectPOST.html
+        fieldName: 'file', // S3 POST: https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectPOST.html
+        headers: [
+          { name: 'x-api-key', value: publishable }
+        ]
       }
     })
 }

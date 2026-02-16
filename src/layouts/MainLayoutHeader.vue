@@ -257,7 +257,9 @@ export default {
         :aria-label="$t({ id: 'navigation.home' })"
         flat
       >
-        <AppLogo class="company-logo gt-xs q-mr-sm" />
+        <div class="brand-logo text-weight-bolder gt-xs q-mr-sm">
+          Naruino
+        </div>
       </AppLink>
 
       <QBtn
@@ -269,7 +271,9 @@ export default {
         flat
         @click="toggleMenu"
       >
-        <AppMiniLogo class="company-mini-logo current-color xs" />
+        <div class="brand-logo brand-logo--mini text-weight-bolder xs">
+          N
+        </div>
       </QBtn>
 
       <div
@@ -392,17 +396,7 @@ export default {
         </QBtn>
       </AppLink>
 
-      <QBtn
-        class="create-asset-button q-px-md flex-item--auto text-weight-bold"
-        :to="{ name: 'newAsset' }"
-        :loading="content.fetchingContentStatus"
-        :rounded="style.roundedTheme"
-        :label="$t({ id: 'navigation.new_listing' })"
-        :icon="icons.matAddBox"
-        color="secondary"
-        align="between"
-        dense
-      />
+      <!-- Add listing button removed as per user request -->
 
       <QBtn
         v-if="currentUser.id && showAccountAvatar"
@@ -502,7 +496,7 @@ export default {
 
           <QItem
             v-close-popup
-            :to="{ name: 'newAsset' }"
+            :to="{ name: 'uploadProject' }"
             exact-active-class="text-weight-medium"
             clickable
           >
@@ -565,10 +559,14 @@ $header-min-breakpoint = 359px
 .mini-logo-container
   @media (min-width $breakpoint-sm-min)
     display: none
-.company-logo
-  width: 9rem
-.company-mini-logo
-  height: 1.8rem
+.brand-logo
+  font-size: 1.5rem
+  letter-spacing: -0.5px
+  line-height: 1
+  font-family: 'Inter', sans-serif
+
+.brand-logo--mini
+  font-size: 1.8rem
 
 // Form
 .header__search-bar

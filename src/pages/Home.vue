@@ -1,622 +1,567 @@
 <script>
 import { mapState, mapGetters } from 'vuex'
-import { get, isString, isUndefined } from 'lodash'
-
 import {
-  matSearch
+  matSearch,
+  matAdd,
+  matArrowForward,
+  matGridView,
+  matPrecisionManufacturing,
+  matRouter,
+  matHomeMax,
+  matWatch,
+  matSensors,
+  matCloudUpload,
+  matVisibility,
+  matFavoriteBorder,
+  matFileDownload,
+  matWbSunny,
+  matNightsStay,
 } from '@quasar/extras/material-icons'
-
-import { isPlaceSearchEnabled } from 'src/utils/places'
-
-import AppCarousel from 'src/components/AppCarousel'
-import AppDateRangePicker from 'src/components/AppDateRangePicker'
-import PlacesAutocomplete from 'src/components/PlacesAutocomplete'
-import CategoryAutocomplete from 'src/components/CategoryAutocomplete'
-
-import * as types from 'src/store/mutation-types'
+import {
+  mdiTwitter,
+  mdiGithub,
+  mdiYoutube,
+  mdiDiscord,
+  mdiForum,
+} from '@quasar/extras/mdi-v5'
 
 import PageComponentMixin from 'src/mixins/pageComponent'
-import StripeMixin from 'src/mixins/stripe'
+import AuthDialogMixin from 'src/mixins/authDialog'
+import AssetCard from 'src/components/AssetCard'
+import AppAvatar from 'src/components/AppAvatar'
 
 export default {
   name: 'Home',
   components: {
-    AppCarousel,
-    AppDateRangePicker,
-    PlacesAutocomplete,
-    CategoryAutocomplete,
+    AssetCard,
+    AppAvatar,
   },
   mixins: [
     PageComponentMixin,
-    StripeMixin,
+    AuthDialogMixin,
   ],
   data () {
     return {
-      searchMode: 'default',
-      location: null,
-      selectedCategory: null,
-      query: '',
-      startDate: '',
-      endDate: '',
-      searchByCategory: process.env.VUE_APP_SEARCH_BY_CATEGORY === 'true',
-      isPlaceSearchEnabled,
-      showPlacesAutocomplete: false, // hiding in this demo since most listings are in the same area
-      lastAssetsPromise: null,
-      assets: null,
-      nbAssetsPerSlideDefault: 4,
-      nbCarouselSlides: 4, // Can be less when there are few assets, set to 1 to disable
-
-      blurredBackgroundSVG: '',
-      showFeaturesSection: process.env.VUE_APP_HOME_FEATURES_COLUMNS === 'true',
+      searchQuery: '',
+      selectedCategory: 'All Projects',
+      isDarkMode: true,
+      categories: [
+        { label: 'All Projects', icon: matGridView },
+        { label: 'Robotics', icon: matPrecisionManufacturing },
+        { label: 'IoT', icon: matRouter },
+        { label: 'Home Automation', icon: matHomeMax },
+        { label: 'Wearables', icon: matWatch },
+        { label: 'Sensors', icon: matSensors },
+      ],
+      trendingAssets: [],
     }
   },
   computed: {
-    showDates () {
-      const hasDates = this.getSearchModeUI(this.searchMode).hasDates
-      return (!this.searchModes.length || hasDates === null) ? true : hasDates
-    },
-    nbAssetsVisiblePerSlide () {
-      const nbAssetsWithoutCarousel = this.$q.screen.gt.xs ? (this.$q.screen.lt.md ? 4 : 3) : 2
-      return this.showCarousel ? this.nbAssetsPerSlideDefault : nbAssetsWithoutCarousel
-    },
-    showCarousel () {
-      return this.$q.screen.gt.sm
-    },
-    videoUrl () {
-      const config = this.config.stelace
-      // Publicly accessible and embeddable video URL is expected
-      // To test Vimeo you can use 'https://player.vimeo.com/video/112866269'
-      // YouTube: 'https://www.youtube-nocookie.com/embed/eY1XtWyKlJA'
-      return get(config, 'instant.videoUrl', '')
-    },
-    nonDefaultSearchModes () {
-      return this.searchModes.filter(m => m !== 'default')
-    },
     ...mapState({
       style: state => state.style,
-      config: state => state.common.config,
       content: state => state.content,
-      locale: state => state.content.locale || 'en',
-      auth: state => state.auth,
     }),
     ...mapGetters([
       'currentUser',
-      'defaultSearchMode',
-      'getHomeHeroUrlTransformed',
-      'getSearchModeUI',
-      'searchModes',
     ]),
-  },
-  watch: {
-    '$route' () {
-      this.handleUrlRedirection(this.$route)
-    }
+    accountName () {
+      return this.currentUser.firstName
+        ? `${this.currentUser.firstName} ${this.currentUser.lastName || ''}` : this.currentUser.displayName
+    },
   },
   async created () {
-    this.lastAssetsPromise = this.$store.dispatch('fetchLastAssets', {
-      nbResults: this.nbAssetsPerSlideDefault * this.nbCarouselSlides
-    })
-
     this.icons = {
       matSearch,
+      matAdd,
+      matArrowForward,
+      matCloudUpload,
+      matVisibility,
+      matFavoriteBorder,
+      matFileDownload,
+      matWbSunny,
+      matNightsStay,
+      mdiTwitter,
+      mdiGithub,
+      mdiYoutube,
+      mdiDiscord,
+      mdiForum,
     }
 
-    this.blurredBackgroundSVG = (await import(
-      /* webpackMode: "eager" */
-      '!!html-loader!src/assets/home-blurred-background.svg'
-    )).default
-  },
-  async mounted () {
-    if (window.__PRERENDER_INJECTED) document.dispatchEvent(new Event('prerender-ready'))
-    this.assets = await this.lastAssetsPromise
+    const assets = await this.$store.dispatch('fetchLastAssets', {
+      nbResults: 6 
+    })
+    this.trendingAssets = assets || []
   },
   methods: {
-    async afterAuth () {
-      const {
-        'reset-password': resetPasswordToken,
-        check,
-        status,
-        code,
-        state,
-      } = this.$route.query
-
-      if (resetPasswordToken) {
-        this.$store.commit({
-          type: types.SET_RESET_PASSWORD_TOKEN,
-          resetToken: resetPasswordToken
-        })
-        this.openAuthDialog({ persistent: true, formType: 'resetPassword' })
-      } else {
-        this.handleUrlRedirection(this.$route)
+    search () {
+      if (this.searchQuery) {
+        this.$store.commit('SET_SEARCH_QUERY', { query: this.searchQuery })
       }
-
-      if (state === 'stripe_oauth') {
-        // Stripe redirection is handled in Home component while the user is redirected to her profile
-        // because OAuth redirection full-formed URIs must be specified in Stripe Dashboard
-        // and there are no way to specify wildcard URIs
-        await this.linkStripeAccountAfterOAuth()
-      } else {
-        if (check === 'email') {
-          if (status === 'valid') {
-            this.notifySuccess('authentication.email_check.success')
-          } else if (status === 'alreadyChecked') {
-            this.notifySuccess('authentication.email_check.already_checked')
-          } else if (status === 'expired') {
-            this.notifyWarning('authentication.email_check.link_expired')
-          } else if (status === 'invalid') {
-            this.notifyWarning('authentication.email_check.link_invalid')
-          }
-
-          // replace the URL so the message won't display at each page refresh
-          this.removeQueryParams(['check', 'status', 'token'])
-        } else if (code) {
-          if (status === 'success') {
-            this.$store.dispatch('getAuthTokensAndUser', { code })
-
-            // replace the URL so getting auth tokens won't happen at each page refresh
-            this.removeQueryParams(['status', 'code'])
-            this.notifySuccess('authentication.log_in_success')
-          } else {
-            this.notifyWarning('error.unknown_happened_header')
-          }
-
-          // if existing, redirect to URL path stored before SSO authentication
-          const ssoRedirectUrlPath = window.localStorage.getItem('ssoRedirectUrlPath')
-          window.localStorage.removeItem('ssoRedirectUrlPath')
-
-          const validSsoRedirectUrlPath = ssoRedirectUrlPath &&
-            isString(ssoRedirectUrlPath) &&
-            ssoRedirectUrlPath.startsWith('/')
-
-          if (validSsoRedirectUrlPath) this.$router.push(ssoRedirectUrlPath)
-        }
-      }
-    },
-    removeQueryParams (queryParams) {
-      const newQuery = Object.assign({}, this.$route.query)
-      queryParams.forEach(param => {
-        delete newQuery[param]
-      })
-      this.$router.replace({ query: newQuery })
-    },
-    selectPlace (place) {
-      if (place) {
-        this.$store.commit({
-          type: types.SET_SEARCH_LOCATION,
-          queryLocation: place.shortDisplayName,
-          latitude: place.latitude,
-          longitude: place.longitude
-        })
-      } else {
-        this.$store.commit({
-          type: types.UNSET_SEARCH_LOCATION
-        })
-      }
-    },
-    selectCategory (category) {
-      this.selectedCategory = category
-    },
-    setDates ({ startDate, endDate }) {
-      if (!isUndefined(startDate)) this.startDate = startDate
-      if (!isUndefined(endDate)) this.endDate = endDate
-    },
-    handleUrlRedirection (route) {
-      const routeQuery = route.query
-
-      if (routeQuery.redirect) {
-        if (this.currentUser.id) {
-          this.$router.replace(routeQuery.redirect)
-        } else {
-          this.openAuthDialog()
-        }
-      }
-    },
-    async searchAssets () {
-      if (this.searchByCategory && !this.query) {
-        this.$store.commit({
-          type: types.SEARCH__SET_SEARCH_FILTERS,
-          filters: {
-            categoryId: this.selectedCategory && this.selectedCategory.id
-          }
-        })
-      } else {
-        this.$store.commit({
-          type: types.SET_SEARCH_QUERY,
-          query: this.query
-        })
-      }
-
-      this.$store.commit({
-        type: types.SEARCH__SET_MAP_OPTIONS,
-        useMapCenter: false,
-        latitude: null,
-        longitude: null
-      })
-
-      this.$store.commit({
-        type: types.SET_SEARCH_DATES,
-        startDate: this.startDate ? new Date(this.startDate).toISOString() : null,
-        endDate: this.endDate ? new Date(this.endDate).toISOString() : null,
-        reset: true
-      })
-
-      if (this.searchMode && this.searchMode !== 'default') {
-        this.$store.dispatch('selectSearchMode', { searchMode: this.searchMode })
-      }
-
       this.$router.push({ name: 'search' })
     },
+    goToUpload () {
+      this.$router.push({ name: 'uploadProject' })
+    },
+    logout () {
+      this.$store.dispatch('logout')
+      // No need to redirect if already on home
+    },
+    getAuthorInitials (asset) {
+      if (!asset.owner) return '?'
+      const first = asset.owner.firstName ? asset.owner.firstName[0] : ''
+      const last = asset.owner.lastName ? asset.owner.lastName[0] : ''
+      return (first + last).toUpperCase() || asset.owner.displayName[0].toUpperCase()
+    },
+    getAuthorName (asset) {
+      return asset.owner ? (asset.owner.displayName || `${asset.owner.firstName} ${asset.owner.lastName}`) : 'Unknown'
+    }
   }
 }
 </script>
 
 <template>
-  <QPage class="stl-footer--bottom">
-    <section
-      :class="[
-        'hero text-center',
-        (blurredBackgroundSVG || style.homeHeroUrl) && !style.homeHasLightBackground ? 'text-white' : ''
-      ]"
-    >
-      <div class="hero__background absolute-full">
-        <!-- Blurred SVG background when loading page and background image.
-            SVG is permanently used on small screens for which no <picture> source is loaded.
-            It is also a fallback for browsers not supporting <picture> (and object-fit) such as IE11 -->
-        <!-- eslint-disable-next-line vue/no-v-html -->
-        <div class="blurred-svg-background" v-html="blurredBackgroundSVG" />
-        <picture>
-          <source
-            type="image/webp"
-            :srcset="`${
-              getHomeHeroUrlTransformed({ width: 1024 })
-            } 1024w, ${
-              getHomeHeroUrlTransformed({ width: 1366 })
-            } 1366w, ${
-              getHomeHeroUrlTransformed({ width: 1600 })
-            } 1600w, ${
-              getHomeHeroUrlTransformed({ width: 1920 })
-            } 1920w, ${
-              getHomeHeroUrlTransformed({ width: 2560 })
-            } 2560w`"
-            sizes="100vw"
-            media="(min-width: 640px)"
-          >
-          <!-- Handle browsers not supporting WebP, contrasting with prerendering env (Puppeter) -->
-          <!-- TODO: remove WebP test when upgrading to AWS image handler version supporting AUTO_WEBP -->
-          <source
-            :srcset="`${
-              getHomeHeroUrlTransformed({ noWebP: true, width: 1024 })
-            } 1024w, ${
-              getHomeHeroUrlTransformed({ noWebP: true, width: 1366 })
-            } 1366w, ${
-              getHomeHeroUrlTransformed({ noWebP: true, width: 1600 })
-            } 1600w, ${
-              getHomeHeroUrlTransformed({ noWebP: true, width: 1920 })
-            } 1920w, ${
-              getHomeHeroUrlTransformed({ noWebP: true, width: 2560 })
-            } 2560w`"
-            sizes="100vw"
-            media="(min-width: 640px)"
-          >
-          <!-- Transparent GIF for browsers not supporting <picture> -->
-          <img
-            :src="content.blankImageBase64"
-            :alt="$t({ id: 'pages.home.page_title' })"
-            class="fit"
-          >
-        </picture>
+  <QPage :class="['home-page transition-all', isDarkMode ? 'bg-black text-white' : 'bg-white text-black']">
+    
+    <!-- ═══════════════════ CUSTOM HEADER ═══════════════════ -->
+    <header class="landing-header absolute-top row justify-between items-center q-px-lg q-py-md z-max">
+      <div class="row items-center cursor-pointer" @click="$router.push({ name: 'home' })">
+        <div class="text-h5 text-weight-900 font-mono tracking-tighter">NARUBLOCKS</div>
       </div>
-      <div class="hero__search stl-content-container stl-content-container--xlarge">
-        <AppContent
-          tag="h1"
-          :class="[
-            'text-h4 text-weight-medium q-my-none',
-          ]"
-          entry="pages"
-          field="home.header"
-        />
-        <QTabs
-          v-model="searchMode"
-          class="q-my-sm hero__search-modes"
-          align="left"
-          breakpoint="0"
+
+      <nav class="row items-center gap-lg gt-xs">
+        <a href="#" class="nav-link text-primary text-weight-bold">Explore</a>
+        <a href="#" class="nav-link text-weight-bold" :class="isDarkMode ? 'text-grey-5' : 'text-grey-7'">Challenges</a>
+        
+        <!-- Theme Toggle -->
+        <QBtn
+          flat
+          round
           dense
-          no-caps
+          :icon="isDarkMode ? icons.matWbSunny : icons.matNightsStay"
+          :color="isDarkMode ? 'white' : 'black'"
+          @click="isDarkMode = !isDarkMode"
         >
-          <QTab
-            v-for="mode in nonDefaultSearchModes"
-            :key="mode"
-            :name="mode"
-            :label="$t({ id: `form.search.modes.${mode}` })"
+          <q-tooltip>{{ isDarkMode ? 'Light Mode' : 'Dark Mode' }}</q-tooltip>
+        </QBtn>
+
+        <!-- Auth Buttons -->
+        <div v-if="!currentUser.id" class="row items-center">
+          <QBtn
+            flat
+            no-caps
+            label="Log In"
+            :color="isDarkMode ? 'white' : 'black'"
+            class="text-weight-bold q-mr-sm"
+            @click="openAuthDialog({ redirectAfterSignup: true })"
           />
-        </QTabs>
-        <form class="hero__search-bar row justify-center shadow-2" @submit.prevent="searchAssets">
-          <div class="row no-wrap flex-item--grow">
-            <QInput
-              v-if="!searchByCategory"
-              ref="heroSearchInput"
-              v-model="query"
-              class="flex-item--grow-shrink-auto"
-              :label="$t({ id: 'form.search.query_placeholder' })"
-              :debounce="300"
-            />
-            <CategoryAutocomplete
-              v-if="searchByCategory"
-              ref="heroSearchCategoryAutocomplete"
-              class="hero__search-field flex-item--grow-shrink-auto"
-              :text-debounce="300"
-              :set-category="selectedCategory"
-              :label="$t({ id: 'form.search.query_placeholder' })"
-              :show-search-icon="false"
-              pad-left
-              @category-changed="selectCategory"
-              @text-changed="t => { query = t }"
-            />
-            <PlacesAutocomplete
-              v-show="isPlaceSearchEnabled && showPlacesAutocomplete"
-              class="hero__search-field hero__search-place flex-item--grow-shrink-auto"
-              pad-left
-              :label="$t({ id: 'form.search.near_location_placeholder' })"
-              :show-search-icon="false"
-              prompt-current-position
-              @selectPlace="selectPlace"
-            />
-            <AppDateRangePicker
-              v-show="showDates"
-              :start-date="startDate"
-              :end-date="endDate"
-              class="hero__search-field hero__search-dates"
-              column-class="col-6"
-              :label="$t({ id: 'form.date_placeholder' })"
-              hide-hint
-              @changeStartDate="startDate => setDates({ startDate })"
-              @changeEndDate="endDate => setDates({ endDate })"
-            />
+          <QBtn
+            unelevated
+            color="primary"
+            text-color="black"
+            label="Upload Project"
+            no-caps
+            class="text-weight-bold q-px-lg"
+            @click="goToUpload"
+          />
+        </div>
+
+        <div v-else class="row items-center">
+          <QBtn
+            unelevated
+            color="primary"
+            text-color="black"
+            label="Upload Project"
+            no-caps
+            class="text-weight-bold q-px-lg q-mr-md"
+            @click="goToUpload"
+          />
+          
+          <QBtn flat round>
+            <AppAvatar :user="currentUser" size="32px" />
+            <QMenu :content-class="isDarkMode ? 'bg-surface text-white' : 'bg-white text-black'">
+              <div class="q-pa-md" style="min-width: 200px">
+                <div class="text-weight-bold q-mb-xs">{{ accountName }}</div>
+                <div class="text-caption text-grey-7 q-mb-md">{{ currentUser.email }}</div>
+                
+                <QList dense>
+                  <QItem clickable v-close-popup :to="{ name: 'publicProfile', params: { id: currentUser.id }}">
+                    <QItemSection>Profile</QItemSection>
+                  </QItem>
+                  <QItem clickable v-close-popup :to="{ name: 'inbox' }">
+                    <QItemSection>Inbox</QItemSection>
+                  </QItem>
+                  <QSeparator class="q-my-sm" :dark="isDarkMode" />
+                  <QItem clickable v-close-popup @click="logout">
+                    <QItemSection class="text-negative">Logout</QItemSection>
+                  </QItem>
+                </QList>
+              </div>
+            </QMenu>
+          </QBtn>
+        </div>
+      </nav>
+
+      <!-- Mobile Menu Button (Visible only on XS) -->
+      <div class="row items-center lt-sm">
+        <QBtn
+          flat
+          round
+          dense
+          :icon="isDarkMode ? icons.matWbSunny : icons.matNightsStay"
+          :color="isDarkMode ? 'white' : 'black'"
+          class="q-mr-sm"
+          @click="isDarkMode = !isDarkMode"
+        />
+        
+        <!-- Mobile Profile/Login Icon -->
+        <QBtn
+          v-if="currentUser.id"
+          flat
+          round
+          dense
+          class="q-mr-sm"
+        >
+          <AppAvatar :user="currentUser" size="24px" />
+          <QMenu :content-class="isDarkMode ? 'bg-surface text-white' : 'bg-white text-black'">
+             <QList dense style="min-width: 150px">
+                <QItem clickable v-close-popup :to="{ name: 'publicProfile', params: { id: currentUser.id }}">
+                  <QItemSection>Profile</QItemSection>
+                </QItem>
+                <QItem clickable v-close-popup @click="logout">
+                  <QItemSection class="text-negative">Logout</QItemSection>
+                </QItem>
+             </QList>
+          </QMenu>
+        </QBtn>
+        <QBtn
+          v-else
+          flat
+          round
+          dense
+          icon="login"
+          :color="isDarkMode ? 'white' : 'black'"
+          class="q-mr-sm"
+          @click="openAuthDialog({ redirectAfterSignup: true })"
+        />
+
+        <QBtn icon="menu" flat :color="isDarkMode ? 'white' : 'black'" @click="$store.commit('LAYOUT__TOGGLE_MENU')" />
+      </div>
+    </header>
+
+    <!-- ═══════════════════ HERO SECTION ═══════════════════ -->
+    <section class="hero-section relative-position flex flex-center column">
+      <div class="hero-bg absolute-full">
+        <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80" class="hero-img fit object-cover" />
+        <div class="hero-overlay absolute-full" :class="isDarkMode ? 'bg-black-grad' : 'bg-white-grad'"></div>
+      </div>
+      
+      <div class="hero-content relative-position text-center q-px-md animate-fade-up">
+        <div class="text-primary text-weight-bolder text-uppercase q-mb-sm tracking-widest">Build The Future</div>
+        <h1 class="text-h2 md:text-h1 text-weight-900 q-mb-md leading-tight">
+          Share Your Circuits<br>with the World
+        </h1>
+        <p class="text-h6 q-mb-xl max-w-md mx-auto" :class="isDarkMode ? 'text-grey-5' : 'text-grey-8'">
+          The premier community for Arduino, ESP32, and Robotics enthusiasts.
+        </p>
+
+        <!-- Search Bar -->
+        <div class="search-container row items-center q-pa-xs q-pl-md round-md shadow-lg mx-auto" :class="isDarkMode ? 'bg-white text-black' : 'bg-grey-2 text-black'">
+          <QIcon :name="icons.matSearch" size="24px" color="grey-5" />
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Search schematics, code, or components..." 
+            class="search-input col q-mx-md text-body1"
+            :class="isDarkMode ? 'text-black' : 'text-black'"
+            @keyup.enter="search"
+          />
+          <QBtn
+            unelevated
+            color="primary"
+            text-color="black"
+            label="Search"
+            no-caps
+            class="search-btn text-weight-bold q-px-lg"
+            @click="search"
+          />
+        </div>
+      </div>
+    </section>
+
+    <div class="content-container q-px-lg q-py-xl mx-auto">
+      
+      <!-- ═══════════════════ CATEGORIES ═══════════════════ -->
+      <section class="categories-section q-mb-xl">
+        <h2 class="text-h5 text-weight-900 q-mb-lg">Browse by Category</h2>
+        <div class="categories-scroll no-scrollbar row no-wrap q-gutter-md">
+          <div
+            v-for="cat in categories"
+            :key="cat.label"
+            class="category-card cursor-pointer row items-center q-px-lg q-py-sm transition-all"
+            :class="[
+              selectedCategory === cat.label ? 'bg-primary text-black border-primary' : '',
+              selectedCategory !== cat.label && isDarkMode ? 'bg-surface text-white border-grey' : '',
+              selectedCategory !== cat.label && !isDarkMode ? 'bg-grey-2 text-black border-grey-4' : ''
+            ]"
+            @click="selectedCategory = cat.label"
+          >
+            <QIcon :name="cat.icon" size="20px" class="q-mr-sm" />
+            <span class="text-weight-bold">{{ cat.label }}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════ TRENDING SECTION ═══════════════════ -->
+      <section class="trending-section q-mb-xl">
+        <div class="row justify-between items-end q-mb-lg">
+          <div>
+            <h2 class="text-h4 text-weight-900 q-mb-xs">Trending Now</h2>
+            <p class="q-mb-none" :class="isDarkMode ? 'text-grey-5' : 'text-grey-7'">Most downloaded projects this week</p>
           </div>
           <QBtn
-            ref="heroSearchButton"
-            class="hero__search-button text-weight-medium q-ma-sm q-px-sm"
-            type="submit"
-            :rounded="style.roundedTheme"
-            color="info"
-            dense
+            flat
             no-caps
+            label="View All"
+            icon-right="arrow_forward"
+            color="primary"
+            class="text-weight-bold"
+            @click="search"
+          />
+        </div>
+
+        <div class="row q-col-gutter-lg">
+          <div
+            v-for="asset in trendingAssets"
+            :key="asset.id"
+            class="col-12 col-sm-6 col-md-4"
           >
-            <QIcon
-              :name="icons.matSearch"
-              :left="true"
+            <AssetCard :asset="asset" :class="['project-card', isDarkMode ? 'dark-card' : 'light-card']">
+              <!-- Custom Content Slot for AssetCard -->
+              <template #default="{ asset }">
+                <div class="q-pt-sm">
+                  <div class="text-h6 text-weight-bold ellipsis" :class="isDarkMode ? 'text-white' : 'text-black'">{{ asset.name }}</div>
+                  
+                  <div class="row items-center justify-between q-mt-xs q-mb-sm">
+                    <div class="row items-center">
+                      <QAvatar size="20px" :color="isDarkMode ? 'accent' : 'primary'" text-color="black" class="q-mr-sm text-caption text-weight-bold">
+                        {{ getAuthorInitials(asset) }}
+                      </QAvatar>
+                      <span class="text-caption" :class="isDarkMode ? 'text-grey-5' : 'text-grey-7'">{{ getAuthorName(asset) }}</span>
+                    </div>
+                  </div>
+
+                  <QSeparator :dark="isDarkMode" class="q-my-sm opacity-20" />
+
+                  <div class="row justify-between items-center" :class="isDarkMode ? 'text-grey-5' : 'text-grey-7'">
+                    <div class="row q-gutter-md">
+                      <div class="row items-center gap-xs">
+                        <QIcon :name="icons.matVisibility" size="16px" />
+                        <span class="text-caption">1.2k</span> <!-- Mock Data -->
+                      </div>
+                      <div class="row items-center gap-xs">
+                        <QIcon :name="icons.matFileDownload" size="16px" />
+                        <span class="text-caption">450</span>  <!-- Mock Data -->
+                      </div>
+                    </div>
+                    <QIcon :name="icons.matFavoriteBorder" size="18px" class="cursor-pointer hover-text-error" />
+                  </div>
+                </div>
+              </template>
+            </AssetCard>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════ CTA SECTION ═══════════════════ -->
+      <section class="cta-section q-my-xl">
+        <div class="cta-card border-primary q-pa-xl row items-center justify-between relative-position overflow-hidden" :class="isDarkMode ? 'bg-surface' : 'bg-grey-1'">
+          <div class="col-12 col-md-8 relative-position z-10">
+            <h2 class="text-h4 text-weight-900 q-mb-sm">Ready to share your creation?</h2>
+            <p class="text-body1 q-mb-lg max-w-lg" :class="isDarkMode ? 'text-grey-5' : 'text-grey-8'">
+              Join 50,000+ makers. Upload your project files, schematics, and code to help the community grow.
+            </p>
+            <QBtn
+              unelevated
+              color="primary"
+              text-color="black"
+              label="Get Started Now"
+              size="lg"
+              no-caps
+              class="text-weight-bold"
+              @click="goToUpload"
             />
-            <AppContent
-              class="gt-xs"
-              entry="pages"
-              field="home.form_button"
-            />
-          </QBtn>
-        </form>
-      </div>
-    </section>
-    <section
-      v-if="showFeaturesSection"
-      :class="['home__features row justify-center q-my-lg q-pb-md' ,style.colorfulTheme ? 'bg-primary-gradient text-white' : '']"
-    >
-      <div class="col-12 col-md-9 flex flex-center">
-        <AppContent
-          tag="h2"
-          class="text-h5 text-center text-weight-medium q-mx-md"
-          entry="pages"
-          field="home.subheader"
-        />
-        <div
-          v-if="videoUrl"
-          class="full-width q-mb-lg home__features-video-aspect-ratio-container"
-        >
-          <iframe
-            :src="videoUrl"
-            class="home__features-video absolute-full"
-            width="100%"
-            height="100%"
-            frameborder="0"
-            :title="config.stelace.instant && config.stelace.instant.serviceName || ''"
-            webkitallowfullscreen
-            mozallowfullscreen
-            allowfullscreen
-          />
+          </div>
+          <div class="col-12 col-md-4 flex flex-center gt-sm">
+             <QIcon :name="icons.matCloudUpload" size="120px" color="primary" class="opacity-80" />
+          </div>
         </div>
-      </div>
-      <div class="col-12 stl-content-container stl-content-container--large row text-center">
-        <div class="col-12 col-md-4">
-          <AppContent
-            tag="h3"
-            class="text-h6"
-            entry="pages"
-            field="home.features.feature_1_title"
-          />
-          <AppContent
-            tag="p"
-            entry="pages"
-            field="home.features.feature_1_content"
-          />
-        </div>
-        <div class="col-12 col-md-4">
-          <AppContent
-            tag="h3"
-            class="text-h6"
-            entry="pages"
-            field="home.features.feature_2_title"
-          />
-          <AppContent
-            tag="p"
-            entry="pages"
-            field="home.features.feature_2_content"
-          />
-        </div>
-        <div class="col-12 col-md-4">
-          <AppContent
-            tag="h3"
-            class="text-h6"
-            entry="pages"
-            field="home.features.feature_3_title"
-          />
-          <AppContent
-            tag="p"
-            entry="pages"
-            field="home.features.feature_3_content"
-          />
-        </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="home__asset-gallery">
-      <AppContent
-        tag="h2"
-        class="text-h5 text-weight-medium text-center"
-        entry="pages"
-        field="home.asset_gallery_header"
-      />
-      <AppCarousel
-        class="stl-content-container stl-content-container--xlarge margin-h-center"
-        :items="assets"
-        :nb-items-per-slide="nbAssetsVisiblePerSlide"
-        :nb-slides="nbCarouselSlides"
-        :active="showCarousel"
-      />
-    </section>
+      <QSeparator :dark="isDarkMode" class="q-my-xl opacity-20" />
 
-    <!-- Use this for testimonials -->
-    <!-- <section class="q-pa-lg">
-      <AppContent
-        tag="h3"
-        class="text-h5 text-center"
-        entry="pages"
-        field="home.testimonials_header"
-      />
-    </section> -->
+      <!-- ═══════════════════ FOOTER ═══════════════════ -->
+      <footer class="landing-footer q-pb-xl">
+        <div class="row q-col-gutter-xl">
+          <div class="col-12 col-md-4">
+            <div class="text-h6 text-weight-900 font-mono text-grey-5 q-mb-sm">NARUBLOCKS</div>
+            <p class="text-caption" :class="isDarkMode ? 'text-grey-6' : 'text-grey-7'">The open hardware documentation platform.</p>
+          </div>
+          
+          <div class="col-6 col-md-2">
+            <div class="text-caption text-weight-bold q-mb-md" :class="isDarkMode ? 'text-white' : 'text-black'">COMMUNITY</div>
+            <div class="column q-gutter-sm">
+              <a href="#" class="nav-link-footer no-decoration" :class="isDarkMode ? 'text-grey-5 hover-text-white' : 'text-grey-7 hover-text-primary'">Forum</a>
+              <a href="#" class="nav-link-footer no-decoration" :class="isDarkMode ? 'text-grey-5 hover-text-white' : 'text-grey-7 hover-text-primary'">Discord</a>
+            </div>
+          </div>
+          
+          <div class="col-6 col-md-2">
+            <div class="text-caption text-weight-bold q-mb-md" :class="isDarkMode ? 'text-white' : 'text-black'">LEGAL</div>
+            <div class="column q-gutter-sm">
+              <a href="#" class="nav-link-footer no-decoration" :class="isDarkMode ? 'text-grey-5 hover-text-white' : 'text-grey-7 hover-text-primary'">Privacy</a>
+              <a href="#" class="nav-link-footer no-decoration" :class="isDarkMode ? 'text-grey-5 hover-text-white' : 'text-grey-7 hover-text-primary'">Terms</a>
+            </div>
+          </div>
+        </div>
 
-    <AppFooter />
+        <QSeparator :dark="isDarkMode" class="q-my-lg opacity-20" />
+
+        <div class="row justify-between items-center text-caption text-grey-7">
+          <div>© 2026 NARUINO_LABS</div>
+          <div class="row q-gutter-md">
+            <QIcon :name="icons.mdiGithub" size="20px" class="cursor-pointer hover-text-primary" />
+            <QIcon :name="icons.mdiTwitter" size="20px" class="cursor-pointer hover-text-primary" />
+            <QIcon :name="icons.mdiYoutube" size="20px" class="cursor-pointer hover-text-primary" />
+          </div>
+        </div>
+      </footer>
+    </div>
   </QPage>
 </template>
 
 <style lang="stylus" scoped>
-$background-image-loaded-from = 640px
+$primary-green = #4ADE80
+$surface-black = #111111
+$border-grey = #333333
 
-.hero
-  position: relative
-  padding 5rem 1rem 2.5rem
-  background-size: cover
-  background-position: 50% 50%
-  @media (max-width $background-image-loaded-from)
-    // on mobile, don’t disturb users with the rest of the page
-    // and make scroll required to see more
-    height: 85vh
-    display: flex
-    justify-content: center
-    align-items: center
+// Utility
+.transition-all
+  transition all 0.3s ease-in-out
+.text-primary
+  color $primary-green !important
+.bg-primary
+  background $primary-green !important
+.border-primary
+  border 1px solid $primary-green
+.bg-surface
+  background $surface-black
+.border-grey
+  border 1px solid $border-grey
+.font-mono
+  font-family monospace
+.text-weight-900
+  font-weight 900
+.opacity-20
+  opacity 0.2
+.opacity-80
+  opacity 0.8
+.z-max
+  z-index 9999
+.gap-lg
+  gap 24px
+.gap-xs
+  gap 4px
+.max-w-md
+  max-width 450px
+.max-w-lg
+  max-width 600px
+.mx-auto
+  margin-left auto
+  margin-right auto
+.no-decoration
+  text-decoration none
+.hover-text-white:hover
+  color white !important
+.hover-text-primary:hover
+  color $primary-green !important
+.hover-text-error:hover
+  color $negative
 
-.hero__background
-  color: transparent
-  img
-    object-fit: cover
-    @media (max-width $background-image-loaded-from)
-      display: none
-.blurred-svg-background
-  position: absolute
-  z-index: -1
-  top: 0
-  left: 0
-  width: 100%
-  height: 100%
+// Header
+.landing-header
+  background rgba(0,0,0,0.2)
+  backdrop-filter blur(10px)
 
-.hero__search
-  position: relative
-  margin: 1rem auto
-.hero__search-modes
-  min-height: 2.5rem
-  @media (max-width $breakpoint-xs-max)
-    visibility: hidden
-.hero__search-bar
-  background-color: #FFF
-  border-radius $generic-border-radius
-.hero__search-field
-  position:relative
-  &:not(:first-child)::after
-    content: ''
-    position:absolute
-    top: 25%
-    bottom: 25%
-    left: 0
-    border-right: 1px solid $grey-4
+.nav-link
+  text-decoration none
+  font-size 14px
+  transition color 0.3s
+  &:hover
+    color $primary-green
 
-.hero__search-place
-  @media (max-width $breakpoint-xs-max)
-    display: none
-.hero__search-dates
-  flex: 1 1 14rem
-  @media (max-width $breakpoint-sm-max)
-    display: none
-.hero__search-button
-  flex: 0 1 auto
-  @media (max-width $breakpoint-xs-max)
-    padding-left: $spaces.md.x
+// Hero
+.hero-section
+  height 100vh
+  min-height 600px
+  width 100%
 
-.hero__content
-  z-index: 1
+.hero-bg
+  z-index 0
+  
+.bg-black-grad
+  background linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.8) 50%, rgba(0,0,0,1) 100%)
+.bg-white-grad
+  background linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,1) 100%)
 
-.rounded-overlay
-  min-height 20rem
-  position relative
-  width 200%
-  top -3rem
-  left -50%
-  margin-bottom -3rem
-  padding-top 3rem
-  border-top-left-radius 100%
-  border-top-right-radius 100%
-  box-shadow 0 -18px 36px 0 rgba(0,0,0,.2)
-
-.bg-secondary-gradient
-  min-height 20rem
-
-.home__features
-  background: $background-color
-  background: var(--stl-color-background)
-
-// Video
-
-.home__features-video-aspect-ratio-container
-  position: relative
-  padding-top: 56.25% // 16/9 ratio
-
-// Pricing
-
-.home__pricing
+.hero-content
   z-index 1
-  min-height 35rem
-  margin-bottom 4rem
-  padding-top 5rem
+  width 100%
 
-.home__pricing-description
-  max-width 50rem
-  margin: 2rem auto 3rem
+.search-container
+  max-width 500px
+  border-radius 4px
+  height 50px
+  
+.search-input
+  border none
+  outline none
+  background transparent
+  height 100%
 
-.home__pricing-background
-  z-index -1
-  transform skewY(4deg)
+// Categories
+.category-card
+  border-radius 4px
+  white-space nowrap
+  border-width 1px
+  border-style solid
 
-// Assets
+// Trending
+.project-card
+  ::v-deep .q-card
+    border-radius 4px
+.dark-card
+  ::v-deep .q-card
+    background $surface-black
+    border 1px solid $border-grey
+    color white
+.light-card
+  ::v-deep .q-card
+    background #f8f9fa
+    border 1px solid #e9ecef
+    color black
+  
+// CTA
+.cta-card
+  border-radius 4px
+  border 1px solid $primary-green
 
-.home__asset-gallery
-  padding: 1rem 0 4rem
-  // Note that colon is required to avoid parsing errors
-  margin: $spaces.lg.y $spaces.md.x $spaces.xl.y
-  @media (min-width $breakpoint-sm-min)
-    margin: $spaces.lg.y $spaces.xl.x $spaces.xl.y
+// Content Container
+.content-container
+  max-width 1200px
+  width 100%
+  position relative
+  margin-top -100px // Overlap hero
+  z-index 2
 
-.q-carousel
-  height: auto
 </style>
 
-<style lang="stylus">
-.blurred-svg-background svg
-  height: 100%
-  width: 100%
-</style>

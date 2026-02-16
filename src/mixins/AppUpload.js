@@ -4,23 +4,23 @@ import { getS3SignedUrl } from 'src/utils/s3'
 import logger from 'src/utils/logger'
 
 export default {
-  data () {
+  data() {
     return {
       uploaderFiles: [], // Quasar files
       uploaderTransformedFiles: [], // copy to keep Quasar data clean, each file "name" need to be the same
     }
   },
   computed: {
-    maxUploadFileSize () {
+    maxUploadFileSize() {
       return this.maxFileSize || this.content.maxUploadFileSize
     },
-    uploadedFiles () {
+    uploadedFiles() {
       return this.uploaderFiles.filter(f => f.__status === 'uploaded')
     },
-    failedFiles () {
+    failedFiles() {
       return this.uploaderFiles.filter(f => f.__status === 'failed')
     },
-    isUploadComplete () {
+    isUploadComplete() {
       return this.uploaderFiles.reduce((complete, f) => {
         return complete && (
           this.uploadedFiles.some(u => u.name === f.name) ||
@@ -33,7 +33,7 @@ export default {
     ]),
   },
   watch: {
-    isUploadComplete (complete) {
+    isUploadComplete(complete) {
       if (complete && typeof this.afterUploadCompleted === 'function') {
         const transformedUploadedFiles = this.getTransformedUploadedFiles()
         const uploadedOrReused = this.uploaderTransformedFiles
@@ -57,12 +57,12 @@ export default {
     }
   },
   methods: {
-    resetUploader () {
+    resetUploader() {
       this.$refs.uploader && this.$refs.uploader.reset()
       this.uploaderFiles = []
       this.uploaderTransformedFiles = []
     },
-    uploadFilter (files) {
+    uploadFilter(files) {
       return files.filter(f => {
         const aboveLimit = f.size > this.maxUploadFileSize
         if (aboveLimit) {
@@ -89,7 +89,7 @@ export default {
         return true
       })
     },
-    uploadFactory (files) {
+    uploadFactory(files) {
       // even if multiple files are selected in file picker
       // there is only one element in the array
       const file = files[0]
@@ -102,30 +102,29 @@ export default {
           handler = typeof handler === 'function' ? handler : _ => _
 
           file.remoteUrl = S3FileUrl
-
           handler({ file, url: S3FileUrl })
 
-          return { formFields, url, fieldName }
+          return { formFields, url, fieldName, headers }
         })
         .catch((err) => {
           logger(err, { notification: 'error.failed_updoad' })
         })
     },
-    filesAdded (added) {
+    filesAdded(added) {
       this.uploaderFiles = [...this.uploaderFiles, ...added]
 
       const transformed = this.getTransformedFiles(added)
       this.uploaderTransformedFiles = [...this.uploaderTransformedFiles, ...transformed]
     },
-    filesRemoved (removed) {
+    filesRemoved(removed) {
       this.uploaderFiles = this.uploaderFiles
         .filter(f => f && !removed.some(r => r.name === f.name))
       this.uploaderTransformedFiles = this.uploaderTransformedFiles
         .filter(f => f && !removed.some(r => r.name === f.name))
       // TODO: handle S3 file removal if appropriate
     },
-    filesUploading (/* { files: uploading } */) {},
-    filesUploaded ({ files: uploaded }) {
+    filesUploading(/* { files: uploading } */) { },
+    filesUploaded({ files: uploaded }) {
       this.uploaderFiles = this.uploaderFiles.filter(f => f && !uploaded.some(u => u.name === f.name))
         .concat(uploaded)
 
@@ -136,7 +135,7 @@ export default {
           return transformed.find(t => t && t.name === old.name) || old
         })
     },
-    filesFailed ({ files: failed }) {
+    filesFailed({ files: failed }) {
       this.uploaderFiles = this.uploaderFiles.filter(f => !failed.some(fail => fail.name === f.name))
         .concat(failed)
 
@@ -147,13 +146,13 @@ export default {
           return transformed.find(t => t && t.name === old.name) || old
         })
     },
-    getFile ({ files = this.uploaderFiles, name }) {
+    getFile({ files = this.uploaderFiles, name }) {
       return files.find(f => f && f.name === name) || {}
     },
-    getTransformedUploadedFiles (fn) {
+    getTransformedUploadedFiles(fn) {
       return this.getTransformedFiles(this.uploadedFiles, fn)
     },
-    getTransformedFiles (files, fn = () => ({})) {
+    getTransformedFiles(files, fn = () => ({})) {
       return files.reduce((tr, f) => {
         tr.push(Object.assign({},
           {

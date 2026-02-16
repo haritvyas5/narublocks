@@ -79,9 +79,8 @@ module.exports = function (ctx) {
   const prerender = ctx.prod && ctx.mode.spa
 
   const defaultStyles = JSON.parse(fs.readFileSync('src/styles.json', 'utf-8'))
-  const localTranslations = JSON.parse(fs.readFileSync(`src/i18n/build/${
-    process.env.VUE_APP_DEFAULT_LANGUAGE || 'en'
-  }.json`, 'utf-8'))
+  const localTranslations = JSON.parse(fs.readFileSync(`src/i18n/build/${process.env.VUE_APP_DEFAULT_LANGUAGE || 'en'
+    }.json`, 'utf-8'))
   const injectServiceName = (str) => {
     if (str) return str.replace(/({SERVICE_NAME})/, process.env.VUE_APP_SERVICE_NAME || '$1')
     return ''
@@ -309,7 +308,7 @@ module.exports = function (ctx) {
       // analyze: true,
       // extractCSS: false,
 
-      async afterBuild () {
+      async afterBuild() {
         // Delete source map files once uploaded to sentry
         // Remove these lines if you need to serve source map in production.
         // Then you may need to adjust webpack devtool build option
@@ -345,7 +344,7 @@ module.exports = function (ctx) {
         /sharp-aws-image-handler-client/
       ],
 
-      extendWebpack (cfg, { isClient }) {
+      extendWebpack(cfg, { isClient }) {
         if (ctx.prod) {
           // spare debug dependency
           cfg.resolve.alias['socket.io-client'] = path.resolve(
@@ -354,12 +353,14 @@ module.exports = function (ctx) {
           )
         }
 
-        cfg.module.rules.push({
-          enforce: 'pre',
-          test: /\.(js|vue)$/,
-          loader: 'eslint-loader',
-          exclude: /node_modules/
-        })
+        /*
+                cfg.module.rules.push({
+                  enforce: 'pre',
+                  test: /\.(js|vue)$/,
+                  loader: 'eslint-loader',
+                  exclude: /node_modules/
+                })
+        */
 
         if (uploadSourceMapsToSentry) {
           cfg.plugins.push(new SentryWebpackPlugin({
@@ -449,15 +450,14 @@ module.exports = function (ctx) {
 
       // Performance: customizing resource hints to preload/prefetch Stelace Instant translations
       // and other files if needed
-      chainWebpack (chain) {
+      chainWebpack(chain) {
         if (ctx.prod) {
           // remove default quasar resource hints
           chain.plugins.delete('preload')
           chain.plugins.delete('prefetch')
 
-          const stelaceI18nRegex = new RegExp(`i18n-stl-${
-            process.env.VUE_APP_DEFAULT_LANGUAGE || 'en'
-          }`)
+          const stelaceI18nRegex = new RegExp(`i18n-stl-${process.env.VUE_APP_DEFAULT_LANGUAGE || 'en'
+            }`)
           const prefetchChunksRegex = /search/
           const preloadChunksRegex = /(landing|common)/
 
@@ -571,6 +571,14 @@ module.exports = function (ctx) {
         '/.netlify': {
           target: 'http://localhost:9000',
           pathRewrite: { '^/.netlify/functions': '' }
+        },
+        // Proxy image requests to Stelace API with auth header injected
+        '/stelace-images': {
+          target: 'http://localhost:4100',
+          pathRewrite: { '^/stelace-images': '/assets' },
+          onProxyReq: (proxyReq) => {
+            proxyReq.setHeader('x-api-key', process.env.STELACE_PUBLISHABLE_API_KEY || '')
+          }
         }
       } : undefined,
 
@@ -623,7 +631,7 @@ module.exports = function (ctx) {
 
     electron: {
       // bundler: 'builder', // or 'packager'
-      extendWebpack (cfg) {
+      extendWebpack(cfg) {
         // do something with Electron process Webpack cfg
       },
       packager: {

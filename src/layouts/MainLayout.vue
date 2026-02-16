@@ -108,7 +108,7 @@ export default {
     :class="blurredPage ? 'app--blur' : ''"
     view="hhr LpR fFr"
   >
-    <MainLayoutHeader />
+    <MainLayoutHeader v-if="!isHome" />
     <QAjaxBar
       v-if="hasLoadingBar"
       ref="loadingBar"

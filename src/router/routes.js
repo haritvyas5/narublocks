@@ -45,6 +45,12 @@ export const defaultRoutes = {
       meta: {}
     },
     {
+      name: 'uploadProject',
+      path: 'upload',
+      component: () => import(/* webpackChunkName: 'landing' */ 'pages/UploadProject.vue'),
+      meta: {}
+    },
+    {
       name: 'publicProfile',
       path: 'p/:id',
       component: () => import(/* webpackChunkName: 'search' */ 'pages/PublicProfile.vue'),
@@ -97,7 +103,7 @@ export default routes
  * @param {String} name - route name like 'terms'
  * @returns {String} route path
  */
-export function getInstantRoutePath (name) {
+export function getInstantRoutePath(name) {
   const route = dynamicRoutes.children.find(r => r.name === name)
   return route ? `${instantPathPrefix}/${route.path}` : '/'
 }
