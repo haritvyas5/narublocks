@@ -1,7 +1,5 @@
 # Naruino Marketplace
 
-[![Stelace](https://user-images.githubusercontent.com/12909094/59638847-c41f1900-9159-11e9-9fa5-6d7806d57c92.png)](https://stelace.com)
-
 An advanced, open-source marketplace for Arduino projects and Narublocks. Built on the **Stelace API** and **Quasar Framework**, this platform allows makers to share, fork, and manage their hardware projects with ease.
 
 ---
