@@ -1,228 +1,133 @@
-[![Stelace-platform-runner](https://user-images.githubusercontent.com/12909094/59638847-c41f1900-9159-11e9-9fa5-6d7806d57c92.png)](https://stelace.com)
+# Naruino Marketplace
 
-# Marketplace starter kit
+[![Stelace](https://user-images.githubusercontent.com/12909094/59638847-c41f1900-9159-11e9-9fa5-6d7806d57c92.png)](https://stelace.com)
 
-> This Stelace starter kit is free to use, under the terms of the [MIT license](./LICENSE).
-Feel free to [fork](
-  https://app.netlify.com/start/deploy?repository=https://github.com/stelace/marketplace-demo
-), contribute or just make it your own :heart:.
+An advanced, open-source marketplace for Arduino projects and Narublocks. Built on the **Stelace API** and **Quasar Framework**, this platform allows makers to share, fork, and manage their hardware projects with ease.
 
 ---
 
-[![CircleCI](https://circleci.com/gh/stelace/marketplace-demo.svg?style=svg)](https://circleci.com/gh/stelace/marketplace-demo)[ ![Netlify Status](https://api.netlify.com/api/v1/badges/b3500c61-82b1-4cdd-a002-890a718ad5ea/deploy-status)](
-  https://app.netlify.com/sites/stelace-marketplace-test/deploys
-)[ ![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](
-  https://conventionalcommits.org
-)
+## 🚀 Overview
 
-This starter kit offers **a [high-performance](#fast-by-default-checkered_flag) AirBnB-like marketplace front-end (Vue.js) with pre-configured serverless deployment** based on [open-source](https://github.com/stelace/stelace) [Stelace API](https://stelace.com) server.
+Naruino Marketplace is a high-performance project sharing platform designed for the maker community. It features a modern, reactive UI with a powerful backend capable of handling asset management, search, and user collaboration.
 
-## Recent Project Updates
+### Key Features
+- **Project Discovery**: Powerful, typo-tolerant search and category-based filtering.
+- **Detailed Project Views**: Comprehensive display of project descriptions, Bill of Materials (BOM), schematics, and code.
+- **Interactive Comments**: Engage with the community on specific projects.
+- **Project Interaction**:
+    - **Forking**: Clone any existing project to your own account to start your own version.
+    - **Management**: Easy uploading, editing, and deletion for project owners.
+    - **File Sharing**: Support for uploading and downloading project files (e.g., `.ino`, `.zip`, Narublocks).
+- **Responsive Design**: Fully optimized for mobile and desktop using Quasar's reactive layout.
 
-I have implemented project deletion, tag functionality, file upload/download, and project forking.
+---
 
-### Asset Page
-**Project Deletion**:
-- **Delete Button**: Added a "Delete Project" button to the header actions.
-    - **Visibility**: Only visible to the project owner.
-- **Deletion Logic**:
-    - Triggers a confirmation dialog.
-    - Dispatches `removeAsset` action.
-    - Redirects to home page on success.
+## 🛠 Tech Stack
 
-**Project Tags**:
-- **Tag Display**: Added tags display below the project metadata section.
-- **Tag Search**:
-    - Clicking a tag navigates to the search page with the tag as a query (`/s?q={tag}`).
+### Frontend
+- **Vue.js 2**: Core reactive framework.
+- **Quasar Framework**: UI components and responsive layout.
+- **Vuex**: Centralized state management.
+- **Lodash**: Utility functions.
 
-### Homepage Tag Sorting
-- **Functionality**: Clicking a category tag on the homepage now filters the "Trending Now" section.
-- **Store Update**: `fetchLastAssets` now supports custom attribute filters.
+### Backend (Stelace)
+- **Stelace API Server**: Open-source backend based on Restify.
+- **PostgreSQL**: Relational database for core data.
+- **ElasticSearch**: Powering the advanced search engine.
+- **Redis**: Caching and session management.
+- **Local Storage Plugin**: Simulated S3 storage for local development.
 
-### File Upload and Download
-- **Functionality**:
-    - "Narublock File" input in `UploadProject.vue` now uploads the selected file to S3.
-    - The file URL is stored in the project's metadata.
-    - "Download .ZIP" button in `Asset.vue` links to this URL.
+---
+
+## 🏗 Project Structure
+
+```text
+├── src/
+│   ├── components/     # Reusable UI components
+│   ├── pages/          # Full-page views (Home, Asset, Upload, etc.)
+│   ├── store/          # Vuex modules (Asset, User, Search, etc.)
+│   ├── utils/          # Client-side utility functions (S3, Stelace, etc.)
+│   └── mixins/         # Shared Vue mixins
+├── stelace/            # Backend API server
+│   ├── plugins/        # Backend extensions (e.g., local-storage)
+│   ├── server/         # Main server entry and configuration
+│   └── public/         # Publicly served assets (uploaded files)
+└── quasar.conf.js      # Frontend build and dev server configuration
+```
+
+---
+
+## 📋 Getting Started
+
+### Prerequisites
+- **Node.js**: >= 12.x
+- **Yarn**: Recommended for dependency management.
+- **Docker**: Required for running backend databases (Postgres, ElasticSearch, Redis) locally.
+
+### Installation
+
+1. **Clone the project**:
+   ```bash
+   git clone <repository-url>
+   cd Marketplace
+   ```
+
+2. **Setup Backend Databases**:
+   Ensure Docker is running, then start the required services:
+   ```bash
+   cd Marketplace
+   docker-compose up -d
+   ```
+
+3. **Install Dependencies**:
+   ```bash
+   # Root (Frontend)
+   yarn
+   
+   # Backend
+   cd stelace
+   yarn
+   ```
+
+4. **Environment Configuration**:
+   Create a `.env.development` in the root:
+   ```bash
+   cp .env.example .env.development
+   ```
+   *Note: Ensure `STELACE_PUBLISHABLE_API_KEY` and other keys match your local Stelace setup.*
+
+5. **Seed Data**:
+   ```bash
+   cd Marketplace
+   yarn seed
+   ```
+
+### Running the Application
+
+Start both the frontend and backend concurrently:
+```bash
+# In the root directory
+yarn dev
+```
+The frontend will typically be available at `http://localhost:8080`.
+
+---
+
+## 🔧 Core Workflows
 
 ### Project Forking
-- **Functionality**:
-    - "Fork Project" button in `Asset.vue` allows authenticated users to copy another user's project.
-    - Creates a new project with "Fork of [Original Name]" and links to the original.
-- **Bug Fixes**: Resolved various API errors (400, 403) during forking by stripping restricted and client-side decorated fields.
+Authenticated users can "Fork" projects they don't own. This creates a duplicate of the project in their own account with a link back to the original project in the metadata.
 
-## Contents
+### File Uploads
+Project creators can upload `.ino` or Narublock files. These are stored via a signed URL mechanism. In local development, the `local-storage` plugin handles these files, serving them from `stelace/public/files`.
 
-- [Features :gift:](#features-gift)
-  - [Fast by default :checkered_flag:](#fast-by-default-checkered_flag)
-  - [Integrations](#integrations)
-- [Testing](#testing)
-- [Stack](#stack)
-- [Getting started](#getting-started)
-- [Deployment](#deployment)
-
-[![marketplace-demo-screenshot](https://stelace-instant-files.s3.amazonaws.com/p/238393/test/images/22d115c4e340b125120ce0f29ab36db8-stelace-marketplace-demo-laptop.png)](https://marketplace.demo.stelace.com)
-
-__[Live Demo](https://marketplace.demo.stelace.com)__
-
-A platform template focused on search, automation and real-time is [also available](https://github.com/stelace/heroes-platform-demo).
-
-**What is Stelace?**
-
-[Stelace API](https://stelace.com/) provides advanced search, asset and user management, automation and content delivery APIs for Web platforms ranging from search-intensive marketplaces to online community apps.
-Stelace [open-source marketplace backend](https://github.com/stelace/stelace) lets you focus on what makes your platform unique.
-
-[API Docs](https://stelace.com/docs)
+### Search & Tags
+Projects can be tagged during upload. These tags are indexed and allow for quick filtering on the homepage or via the search bar.
 
 ---
 
-## Features :gift:
+## 📄 License
+This project is licensed under the **MIT License**.
 
-- [Asset](https://stelace.com/docs/assets) management. _Assets_ can be anything from flats and homes to cars or concerts
-- Powerful and typo-tolerant [Search](https://stelace.com/docs/search) :mag:, on a relevance _and_ dynamic availability basis
-- [User](https://stelace.com/docs/users) authentication including social login & SSO
-- User management and [Ratings](https://stelace.com/docs/ratings) :star:
-- Real-time [Events](https://stelace.com/docs/command/events) and [Messaging](https://stelace.com/docs/messages)
-- Automation with Stelace [Workflows](https://stelace.com/docs/command/workflows) :traffic_light:
-- Customizable payment process using serverless functions
-- Headless CMS :page_with_curl: with Stelace [Content API](https://stelace.com/docs/content)
-- Global CDN for images and user files
-- i18n :earth_africa: and full [translations](./docs/i18n.md)
-- [Accessibility](./docs/accessibility.md)
-- …
-- and [much more](https://stelace.com) with Stelace API
-
-### Fast by default :checkered_flag:
-
-Get 90+ PageSpeed score out of the box:
-
-- Pre-rendered static pages for fastest page load, with Vue.js hydrating into full SPA.
-- Code-splitting with optimized Webpack config in `quasar.conf.js`.
-- Image compression using WebP and serverless resizing using AWS Lambda
-- Ressource prefetching and preloading
-- PWA-ready thanks to Quasar
-
-This kit follows the [PRPL pattern](https://web.dev/apply-instant-loading-with-prpl/): more info in [docs](./docs/performance.md).
-
-### Integrations
-
-Leverage these integrations to start running your platform even faster:
-
-- Automated and continuous deployment with [Netlify](https://www.netlify.com/)
-- [Stripe](https://stripe.com/) payments using [Netlify functions](https://docs.netlify.com/functions/overview/) and Stelace workflows
-- [Sentry](https://sentry.io/) for debugging in production environment
-- Maps and place search with [OpenStreetMap](https://www.openstreetmap.org/) providers
-- Google Analytics
-
-## Testing
-
-- End-to-end cross-browser testing with [TestCafé](https://devexpress.github.io/testcafe)
-- Continuous integration with [CircleCI](https://circleci.com/)
-
-## Stack
-
-Serverless [JAMStack architecture](https://jamstack.org/):
-
-- [Vue.js](https://github.com/vuejs/vue)
-- [Quasar](https://github.com/quasarframework/quasar) framework
-- [Stelace API](https://stelace.com) as backend
-- [Stelace headless CMS](https://stelace.com/docs/content)
-- [Stelace.js](https://github.com/stelace/stelace.js) SDK
-- [Netlify](https://www.netlify.com/) for static site and lambda functions deployment
-
-Node.js >= 10.18 is used for tooling.
-
-## Getting started
-
-You need your Stelace API keys to get started. Good news: Stelace is [open-source](https://github.com/stelace/stelace) so you can deploy your own server.
-
-1. Clone this repository
-
-```sh
-git clone https://github.com/stelace/marketplace-demo.git
-cd marketplace-demo
-```
-
-2. Install node_modules
-
-```sh
-# using yarn instead of npm is recommended
-yarn
-```
-
-> If you don’t have [yarn](https://yarnpkg.com/) installed, you can follow these [instructions](https://yarnpkg.com/docs/install).
-
-3. Create environment files for development and production.
-
-You can copy `.env.example` and fill it with Stelace API keys ([generate them](https://github.com/stelace/stelace/blob/dev/docs/api_keys.md) with the server-side open-source project).
-
-```sh
-cp .env.example .env.development
-# You may want to use live keys in this file
-cp .env.example .env.production
-```
-
-You need to fill the following environment variables:
-
-- `STELACE_INSTANT_WEBSITE_URL`
-- `STELACE_PUBLISHABLE_API_KEY` (*pubk_*...) used in Vue app
-- `STELACE_SECRET_API_KEY` (*seck_*...) used in data seeding scripts
-- `STELACE_API_URL` can be left blank unless you use your own server rather than default `api.stelace.com`
-
-Please refer to [`.env.example`](./.env.example) for more details about environment variables, including map, payment gateway, logging and analytics.
-
-4. Seed development [data](./docs/development-data.md)
-
-```sh
-yarn seed
-```
-
-5. Start the development server
-
-```sh
-quasar dev
-# or, if you want to run Netlify functions with stripe payments as well:
-yarn dev
-```
-
-Please refer to [Quasar docs](https://quasar.dev/introduction-to-quasar) for more details about front-end configuration and components.
-
-<details>
-<summary>Developing with self-hosted Stelace API server (open-source backend).</summary>
-
-Stelace Core API server has to be launched locally before starting this project's server.
-
-First we need to launch services needed by Stelace Core API.
-
-```sh
-yarn docker:db
-```
-
-Then we need to initialize the database with Instant configuration.
-
-```sh
-cd /path/to/stelace-core
-git checkout dev
-yarn setup:instant
-```
-
-Secret and publishable api keys will be displayed so you can use it as environment variables for this project.
-You’ll also need to set some environment variables such as `STELACE_API_URL` (http://127.0.0.1:API_PORT).
-
-Let’s start the server.
-
-```sh
-yarn dev
-```
-
-Please refer to`.env.example` in `stelace-server` project.
-
-</details>
-
-6. Branding
-
-Customize the app with your own colors and branding in `src/styles.json`, documented in [styles.json.md](https://github.com/stelace/marketplace-demo/blob/dev/src/styles.json.md).
-
-## Deployment
-
-Please refer to [deployment docs section](./docs/deployment.md) for more details.
+---
+*Made with ❤️ for the Maker Community by the Stelace Team.*
