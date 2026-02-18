@@ -138,6 +138,15 @@ export default {
     narublockFileUrl () {
       return get(this.activeAsset, 'metadata.narublockFileUrl', '')
     },
+    pxtEditorUrl () {
+      // Assuming PXT runs on localhost:3232 when served
+      // In a real scenario, this would point to the hosted PXT editor
+      const pxtUrl = 'http://localhost:3232'
+      if (this.narublockFileUrl) {
+          return `${pxtUrl}/#importurl:${encodeURIComponent(this.narublockFileUrl)}`
+      }
+      return pxtUrl
+    }
   },
   async preFetch ({ store, currentRoute, redirect }) {
     const { id: assetId } = currentRoute.params
@@ -333,14 +342,13 @@ export default {
             
             <QBtn 
               unelevated 
-              :type="narublockFileUrl ? 'a' : 'button'"
-              :href="narublockFileUrl"
-              :target="narublockFileUrl ? '_blank' : ''"
+              type="a"
+              :href="pxtEditorUrl"
+              target="_blank"
               color="white" 
               text-color="black" 
               no-caps 
               class="full-width text-weight-bold q-py-md q-mb-md button-rounded"
-              :disable="!narublockFileUrl"
             >
               <template #default>
                 <div class="row items-center q-gutter-x-sm">
